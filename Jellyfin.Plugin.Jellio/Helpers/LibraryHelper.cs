@@ -1,5 +1,4 @@
 using System;
-using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Data.Enums;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Library;
@@ -10,8 +9,14 @@ namespace Jellyfin.Plugin.Jellio.Helpers;
 
 public static class LibraryHelper
 {
-    internal static BaseItemDto[] GetUserLibraries(User user, IUserViewManager userViewManager, IDtoService dtoService)
+    internal static BaseItemDto[] GetUserLibraries(Guid userId, IUserManager userManager, IUserViewManager userViewManager, IDtoService dtoService)
     {
+        var user = userManager.GetUserById(userId);
+        if (user == null)
+        {
+            return Array.Empty<BaseItemDto>();
+        }
+
         var query = new UserViewQuery { User = user };
         var folders = userViewManager.GetUserViews(query);
 

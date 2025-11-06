@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Mime;
-using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellio.Helpers;
 using Jellyfin.Plugin.Jellio.Models;
@@ -91,8 +90,14 @@ public class AddonController(
         return meta;
     }
 
-    private OkObjectResult GetStreamsResult(User user, List<BaseItem> items)
+    private OkObjectResult GetStreamsResult(Guid userId, IUserManager userManager, List<BaseItem> items)
     {
+        var user = userManager.GetUserById(userId);
+        if (user == null)
+        {
+            return Ok(new { streams = Array.Empty<object>() });
+        }
+
         var baseUrl = GetBaseUrl();
         var dtoOptions = new DtoOptions(true);
         var dtos = dtoService.GetBaseItemDtos(items, dtoOptions, user);
@@ -110,9 +115,9 @@ public class AddonController(
     [HttpGet("manifest.json")]
     public IActionResult GetManifest([ConfigFromBase64Json] ConfigModel config)
     {
-        var user = (User)HttpContext.Items["JellioUser"]!;
+        var userId = (Guid)HttpContext.Items["JellioUserId"]!;
 
-        var userLibraries = LibraryHelper.GetUserLibraries(user, userViewManager, dtoService);
+        var userLibraries = LibraryHelper.GetUserLibraries(userId, userManager, userViewManager, dtoService);
         userLibraries = Array.FindAll(userLibraries, l => config.LibrariesGuids.Contains(l.Id));
         if (userLibraries.Length != config.LibrariesGuids.Count)
         {
@@ -177,16 +182,16 @@ public class AddonController(
         string? extra = null
     )
     {
-        var user = (User)HttpContext.Items["JellioUser"]!;
+        var userId = (Guid)HttpContext.Items["JellioUserId"]!;
 
-        var userLibraries = LibraryHelper.GetUserLibraries(user, userViewManager, dtoService);
+        var userLibraries = LibraryHelper.GetUserLibraries(userId, userManager, userViewManager, dtoService);
         var catalogLibrary = Array.Find(userLibraries, l => l.Id == catalogId);
         if (catalogLibrary == null)
         {
             return NotFound();
         }
 
-        var item = libraryManager.GetParentItem(catalogLibrary.Id, user.Id);
+        var item = libraryManager.GetParentItem(catalogLibrary.Id, userId);
         if (item is not Folder folder)
         {
             folder = libraryManager.GetUserRootFolder();
@@ -241,9 +246,9 @@ public class AddonController(
         Guid mediaId
     )
     {
-        var user = (User)HttpContext.Items["JellioUser"]!;
+        var userId = (Guid)HttpContext.Items["JellioUserId"]!;
 
-        var item = libraryManager.GetItemById<BaseItem>(mediaId, user);
+        var item = libraryManager.GetItemById<BaseItem>(mediaId, userId);
         if (item == null)
         {
             return NotFound();
@@ -291,15 +296,15 @@ public class AddonController(
         Guid mediaId
     )
     {
-        var user = (User)HttpContext.Items["JellioUser"]!;
+        var userId = (Guid)HttpContext.Items["JellioUserId"]!;
 
-        var item = libraryManager.GetItemById<BaseItem>(mediaId, user);
+        var item = libraryManager.GetItemById<BaseItem>(mediaId, userId);
         if (item == null)
         {
             return NotFound();
         }
 
-        return GetStreamsResult(user, [item]);
+        return GetStreamsResult(userId, userManager, [item]);
     }
 
     [HttpGet("stream/movie/tt{imdbId}.json")]
@@ -308,16 +313,16 @@ public class AddonController(
         string imdbId
     )
     {
-        var user = (User)HttpContext.Items["JellioUser"]!;
+        var userId = (Guid)HttpContext.Items["JellioUserId"]!;
 
-        var query = new InternalItemsQuery(user)
+        var query = new InternalItemsQuery(userId)
         {
             HasAnyProviderId = new Dictionary<string, string> { ["Imdb"] = $"tt{imdbId}" },
             IncludeItemTypes = [BaseItemKind.Movie],
         };
         var items = libraryManager.GetItemList(query);
 
-        return GetStreamsResult(user, items);
+        return GetStreamsResult(userId, userManager, items);
     }
 
     [HttpGet("stream/series/tt{imdbId}:{seasonNum:int}:{episodeNum:int}.json")]
@@ -328,9 +333,9 @@ public class AddonController(
         int episodeNum
     )
     {
-        var user = (User)HttpContext.Items["JellioUser"]!;
+        var userId = (Guid)HttpContext.Items["JellioUserId"]!;
 
-        var seriesQuery = new InternalItemsQuery(user)
+        var seriesQuery = new InternalItemsQuery(userId)
         {
             IncludeItemTypes = [BaseItemKind.Series],
             HasAnyProviderId = new Dictionary<string, string> { ["Imdb"] = $"tt{imdbId}" },
@@ -344,7 +349,7 @@ public class AddonController(
 
         var seriesIds = seriesItems.Select(s => s.Id).ToArray();
 
-        var episodeQuery = new InternalItemsQuery(user)
+        var episodeQuery = new InternalItemsQuery(userId)
         {
             IncludeItemTypes = [BaseItemKind.Episode],
             AncestorIds = seriesIds,
@@ -353,6 +358,6 @@ public class AddonController(
         };
         var episodeItems = libraryManager.GetItemList(episodeQuery);
 
-        return GetStreamsResult(user, episodeItems);
+        return GetStreamsResult(userId, userManager, episodeItems);
     }
 }

@@ -1,6 +1,5 @@
 using System;
 using System.Security.Claims;
-using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Data.Queries;
 using MediaBrowser.Controller.Devices;
 using MediaBrowser.Controller.Library;
@@ -26,23 +25,8 @@ public static class RequestHelpers
         return userIdGuid;
     }
 
-    internal static User? GetCurrentUser(ClaimsPrincipal claimsPrincipal, IUserManager userManager)
-    {
-        var userIdString = claimsPrincipal.FindFirstValue("Jellyfin-UserId");
-
-        if (string.IsNullOrEmpty(userIdString))
-        {
-            return null;
-        }
-
-        return !Guid.TryParse(userIdString, out var userIdGuid)
-            ? null
-            : userManager.GetUserById(userIdGuid);
-    }
-
-    internal static User? GetUserByAuthToken(
+    internal static Guid? GetUserIdByAuthToken(
         string authToken,
-        IUserManager userManager,
         IDeviceManager deviceManager
     )
     {
@@ -50,6 +34,6 @@ public static class RequestHelpers
             .GetDevices(new DeviceQuery { AccessToken = authToken, Limit = 1 })
             .Items;
 
-        return items.Count == 0 ? null : userManager.GetUserById(items[0].UserId);
+        return items.Count == 0 ? null : items[0].UserId;
     }
 }

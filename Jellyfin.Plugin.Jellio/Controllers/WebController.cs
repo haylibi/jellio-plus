@@ -44,14 +44,14 @@ public class WebController(
     [Produces(MediaTypeNames.Application.Json)]
     public IActionResult GetServerInfo()
     {
-        var user = RequestHelpers.GetCurrentUser(User, userManager);
-        if (user == null)
+        var userId = RequestHelpers.GetCurrentUserId(User);
+        if (userId == null)
         {
             return Unauthorized();
         }
 
         var friendlyName = serverApplicationHost.FriendlyName;
-        var libraries = LibraryHelper.GetUserLibraries(user, userViewManager, dtoService);
+        var libraries = LibraryHelper.GetUserLibraries(userId.Value, userManager, userViewManager, dtoService);
 
         return Ok(new { name = friendlyName, libraries });
     }

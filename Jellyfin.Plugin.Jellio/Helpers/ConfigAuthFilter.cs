@@ -17,18 +17,25 @@ public class ConfigAuthFilter(IUserManager userManager, IDeviceManager deviceMan
     {
         if (context.ActionArguments.TryGetValue("config", out var cfg) && cfg is ConfigModel config)
         {
-            var user = RequestHelpers.GetUserByAuthToken(
+            var userId = RequestHelpers.GetUserIdByAuthToken(
                 config.AuthToken,
-                userManager,
                 deviceManager
             );
+            if (userId == null)
+            {
+                context.Result = new UnauthorizedResult();
+                return;
+            }
+
+            // Verify user exists
+            var user = userManager.GetUserById(userId.Value);
             if (user == null)
             {
                 context.Result = new UnauthorizedResult();
                 return;
             }
 
-            context.HttpContext.Items["JellioUser"] = user;
+            context.HttpContext.Items["JellioUserId"] = userId.Value;
         }
 
         await next().ConfigureAwait(false);
