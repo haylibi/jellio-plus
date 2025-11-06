@@ -38,6 +38,34 @@ public class WebController : ControllerBase
     [HttpGet("{config?}/configure")]
     public IActionResult GetIndex(string? config = null)
     {
+        // Check if user is authenticated
+        var userId = RequestHelpers.GetCurrentUserId(User);
+        if (userId == null)
+        {
+            // Redirect to Jellyfin web UI with a message
+            return Content(@"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jellio - Authentication Required</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #101010; color: #fff; }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { color: #00a4dc; }
+        .button { display: inline-block; padding: 12px 24px; background: #00a4dc; color: white; text-decoration: none; border-radius: 4px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h1>Authentication Required</h1>
+        <p>Please access Jellio through Jellyfin's plugin configuration page.</p>
+        <p>Go to: <strong>Dashboard → Plugins → Jellio → Settings</strong></p>
+        <a href='/web/index.html#!/dashboard' class='button'>Go to Jellyfin Dashboard</a>
+    </div>
+</body>
+</html>", "text/html");
+        }
+
         const string ResourceName = "Jellyfin.Plugin.Jellio.Web.config.html";
 
         var resourceStream = _executingAssembly.GetManifestResourceStream(ResourceName);
@@ -50,16 +78,16 @@ public class WebController : ControllerBase
         return new FileStreamResult(resourceStream, "text/html");
     }
 
-    [Authorize]
     [HttpGet("server-info")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [Produces(MediaTypeNames.Application.Json)]
     public IActionResult GetServerInfo()
     {
+        // Try to get user from claims (works when accessed from Jellyfin web UI)
         var userId = RequestHelpers.GetCurrentUserId(User);
         if (userId == null)
         {
-            return Unauthorized();
+            return Unauthorized(new { error = "Not authenticated. Please access this page through Jellyfin's web interface." });
         }
 
         var friendlyName = _serverApplicationHost.FriendlyName;
