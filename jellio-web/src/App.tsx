@@ -14,7 +14,13 @@ function App() {
     // Not authenticated; send user to Jellyfin's login and return to plugin config page
     const jellyfinUrl = getBaseUrl().replace(/\/jellio$/, '');
     const returnUrl = encodeURIComponent('/configurationpage?name=Jellio');
-    window.location.replace(`${jellyfinUrl}/web/#/login.html?url=${encodeURIComponent(returnUrl)}`);
+    const loginUrl = `${jellyfinUrl}/web/#/login.html?url=${encodeURIComponent(returnUrl)}`;
+    // Break out of iframe to avoid login loop inside config frame
+    if (window.top) {
+      window.top.location.href = loginUrl;
+    } else {
+      window.location.href = loginUrl;
+    }
     return null;
   }
 

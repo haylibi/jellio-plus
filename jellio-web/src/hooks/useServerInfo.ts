@@ -9,26 +9,15 @@ const useServerInfo = (): Maybe<ServerInfo> => {
 
   useEffect(() => {
     const fetchServerInfo = async (): Promise<void> => {
-      // Still mounting or computing token
-      if (accessToken === undefined) {
-        setServerInfo(undefined);
-        return;
-      }
-
-      // No token available from localStorage
-      if (accessToken === null) {
-        setServerInfo(null);
-        return;
-      }
-
       try {
-        const info = await getServerInfo(accessToken);
+        // Try with token if present; otherwise rely on session cookies
+        const info = await getServerInfo(accessToken ?? undefined);
         setServerInfo({
-          accessToken,
+          accessToken: accessToken ?? '',
           ...info,
         });
       } catch (error) {
-        console.error('Failed to fetch server info with access token:', error);
+        console.error('Failed to fetch server info:', error);
         setServerInfo(null);
       }
     };
