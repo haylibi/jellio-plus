@@ -3,13 +3,16 @@ import { getBaseUrl } from '@/lib/utils';
 import type { Library } from '@/types';
 
 export const getServerInfo = async (
-  token: string,
+  token?: string,
 ): Promise<{ serverName: string; libraries: Library[] }> => {
   try {
+    const headers = token
+      ? { Authorization: `MediaBrowser Token="${token}"` }
+      : {};
+    
     const response = await axios.get(`${getBaseUrl()}/server-info`, {
-      headers: {
-        Authorization: `MediaBrowser Token="${token}"`,
-      },
+      headers,
+      withCredentials: true, // Include cookies for Jellyfin session auth
     });
 
     return {
@@ -26,12 +29,15 @@ export const getServerInfo = async (
   }
 };
 
-export const startAddonSession = async (token: string): Promise<string> => {
+export const startAddonSession = async (token?: string): Promise<string> => {
   try {
+    const headers = token
+      ? { Authorization: `MediaBrowser Token="${token}"` }
+      : {};
+      
     const response = await axios.post(`${getBaseUrl()}/start-session`, null, {
-      headers: {
-        Authorization: `MediaBrowser Token="${token}"`,
-      },
+      headers,
+      withCredentials: true,
     });
     return response.data.accessToken;
   } catch (error) {
