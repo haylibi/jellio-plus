@@ -81,6 +81,7 @@ jobs:
         uses: oddstr13/jellyfin-plugin-repository-manager@v1.1.1
         id: jprm
         with:
+          # Action expects 'dotnet-target' (not dotnet-framework)
           dotnet-target: 'net9.0'
           version: ${{ steps.version.outputs.version_number }}
 
