@@ -15,10 +15,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
+      - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -77,11 +77,11 @@ jobs:
         env:
           RELEASE_BODY: ${{ github.event.release.body }}
 
-      - name: Build Jellyfin Plugin & Package ZIP
+      - name: Build Jellyfin Plugin & Package ZIP (net9)
         uses: oddstr13/jellyfin-plugin-repository-manager@v1.1.1
         id: jprm
         with:
-          dotnet-target: 'net8.0'
+          dotnet-target: 'net9.0'
           version: ${{ steps.version.outputs.version_number }}
 
       - name: Get Zip Filename and Path
