@@ -3,13 +3,13 @@ using System.Net.Mime;
 using System.Reflection;
 using Jellyfin.Plugin.Jellio.Helpers;
 using MediaBrowser.Controller;
-using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Devices;
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Dto; // BaseItemDto
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
 namespace Jellyfin.Plugin.Jellio.Controllers;
 
 [ApiController]
@@ -73,14 +73,36 @@ public class WebController : ControllerBase
             }
         }
 
-        if (userId == null)
+        if (userId == null || userId == Guid.Empty)
         {
+            // LOG: No valid userId found in GetServerInfo (unauthorized request)
             return Unauthorized();
         }
 
         var friendlyName = _serverApplicationHost.FriendlyName;
-        var libraries = LibraryHelper.GetUserLibraries(userId.Value, _userManager, _userViewManager, _dtoService);
+        BaseItemDto[] libraries;
+        try
+        {
+            libraries = LibraryHelper.GetUserLibraries(userId.Value, _userManager, _userViewManager, _dtoService);
+        }
+        catch (ArgumentException)
+        {
+            // LOG: Invalid userId (ArgumentException) in GetServerInfo
+            return BadRequest(new { error = "Invalid user id." });
+        }
+        catch (Exception)
+        {
+            // LOG: Unexpected error in library enumeration in GetServerInfo
+            return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Internal server error." });
+        }
 
+        if (libraries == null || libraries.Length == 0)
+        {
+            // LOG: No libraries found for user in GetServerInfo
+            return NotFound(new { error = "No libraries found for user." });
+        }
+
+        // LOG: Successfully returned libraries for user in GetServerInfo
         return Ok(new { name = friendlyName, libraries });
     }
 
@@ -121,19 +143,32 @@ public class WebController : ControllerBase
         // Expect formats like:
         // MediaBrowser Token="..."
         // MediaBrowser Client="...", Device="...", DeviceId="...", Version="...", Token="..."
-        if (string.IsNullOrWhiteSpace(headerValue)) return null;
-        if (!headerValue.StartsWith("MediaBrowser", StringComparison.OrdinalIgnoreCase)) return null;
+        if (string.IsNullOrWhiteSpace(headerValue))
+        {
+            return null;
+        }
+        if (!headerValue.StartsWith("MediaBrowser", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
 
-        var idx = headerValue.IndexOf(' ');
+        var idx = headerValue.IndexOf(' ', StringComparison.Ordinal);
         var paramPart = idx >= 0 ? headerValue[(idx + 1)..] : string.Empty;
-        if (string.IsNullOrEmpty(paramPart)) return null;
+        if (string.IsNullOrEmpty(paramPart))
+        {
+            return null;
+        }
 
         // Split by commas, then by =, strip quotes
         var segments = paramPart.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         foreach (var seg in segments)
         {
             var kv = seg.Split('=', 2, StringSplitOptions.TrimEntries);
-            if (kv.Length != 2) continue;
+            if (kv.Length != 2)
+            {
+                continue;
+            }
+
             var key = kv[0].Trim();
             var val = kv[1].Trim().Trim('"');
             if (key.Equals("Token", StringComparison.OrdinalIgnoreCase))

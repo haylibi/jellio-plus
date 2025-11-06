@@ -13,6 +13,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
+using MediaBrowser.Model.Entities; // ensure item sort order enums
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.Jellio.Controllers;
@@ -104,7 +105,7 @@ public class AddonController : ControllerBase
         return meta;
     }
 
-    private OkObjectResult GetStreamsResult(Guid userId, List<BaseItem> items)
+    private OkObjectResult GetStreamsResult(Guid userId, IReadOnlyList<BaseItem> items)
     {
         var user = _userManager.GetUserById(userId);
         if (user == null)
@@ -241,11 +242,6 @@ public class AddonController : ControllerBase
         {
             Recursive = true, // need this for search to work
             IncludeItemTypes = [BaseItemKind.Movie, BaseItemKind.Series],
-            OrderBy =
-            [
-                (ItemSortBy.ProductionYear, SortOrder.Descending),
-                (ItemSortBy.SortName, SortOrder.Ascending),
-            ],
             Limit = 100,
             StartIndex = startIndex,
             SearchTerm = searchTerm,
@@ -355,7 +351,7 @@ public class AddonController : ControllerBase
         };
         var items = _libraryManager.GetItemList(query);
 
-        return GetStreamsResult(userId, items);
+    return GetStreamsResult(userId, items);
     }
 
     [HttpGet("stream/series/tt{imdbId}:{seasonNum:int}:{episodeNum:int}.json")]
@@ -397,6 +393,6 @@ public class AddonController : ControllerBase
         };
         var episodeItems = _libraryManager.GetItemList(episodeQuery);
 
-        return GetStreamsResult(userId, episodeItems);
+    return GetStreamsResult(userId, episodeItems);
     }
 }
