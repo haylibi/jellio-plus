@@ -13,7 +13,7 @@ function App() {
   if (serverInfo === null) {
     const jellyfinUrl = getBaseUrl().split('/jellio')[0];
     window.location.replace(
-      `${jellyfinUrl}/web/#/login.html?url=%2Fconfigurationpage%3Fname%3DJellio`,
+      `${jellyfinUrl}/web/#/login.html?url=%2Fjellio`,
     );
     return null;
   }
