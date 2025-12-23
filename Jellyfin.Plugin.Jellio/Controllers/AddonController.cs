@@ -151,7 +151,7 @@ public class AddonController : ControllerBase
         var streams = dtos.SelectMany(dto =>
             dto.MediaSources.Select(source => new StreamDto
             {
-                Url = $"{baseUrl}/videos/{dto.Id}/stream?mediaSourceId={source.Id}&api_key={authToken}",
+                Url = $"{baseUrl}/videos/{dto.Id}/stream?mediaSourceId={source.Id}&api_key={authToken}&videoCodec=copy&audioCodec=copy",
                 Name = "Jellio",
                 Description = source.Name,
             })
